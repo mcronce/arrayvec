@@ -123,13 +123,32 @@ impl<const CAP: usize> ArrayString<CAP>
     pub fn from_byte_string(b: &[u8; CAP]) -> Result<Self, Utf8Error> {
         let len = str::from_utf8(b)?.len();
         debug_assert_eq!(len, CAP);
+        let s = unsafe { Self::from_byte_string_unchecked(b) };
+        Ok(s)
+    }
+
+    /// Create a new `ArrayString` from a byte string.
+    ///
+    /// # Safety
+    ///
+    /// It is UB if `input` is not valid UTF-8.
+    ///
+    /// ```
+    /// use arrayvec::ArrayString;
+    ///
+    /// let bytes = b"hello world";
+    /// let string = unsafe { ArrayString::from_byte_string_unchecked(bytes) };
+    /// assert_eq!(string, "hello world");
+    /// ```
+    #[inline]
+    pub unsafe fn from_byte_string_unchecked(b: &[u8; CAP]) -> Self {
         let mut vec = Self::new();
         unsafe {
             (b as *const [u8; CAP] as *const [MaybeUninit<u8>; CAP])
                 .copy_to_nonoverlapping(&mut vec.xs as *mut [MaybeUninit<u8>; CAP], 1);
             vec.set_len(CAP);
         }
-        Ok(vec)
+        vec
     }
 
     /// Create a new `ArrayString` value fully filled with ASCII NULL characters (`\0`). Useful
